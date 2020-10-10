@@ -116,10 +116,12 @@ def main():
                 train_losses.append((global_iter, train_loss))
                 lrs.append((global_iter, lr))
                 
-                print(f'{time_str()} ep[{epoch+1}/{EPOCHS}], it[{local_iter+1:-3d}/{ITERS}]:'
-                      f' tr_acc: {train_acc:5.2f}%, tr_loss: {train_loss:.4f},'
-                      f' te_acc: {test_acc:5.2f}%, te_loss: {test_loss:.4f},'
-                      f' lr: {lr}')
+                print(
+                    f'{time_str()} ep[{epoch+1}/{EPOCHS}], it[{local_iter+1:-3d}/{ITERS}]:'
+                    f' tr_acc: {train_acc:5.2f}%, tr_loss: {train_loss:.4f},'
+                    f' te_acc: {test_acc:5.2f}%, te_loss: {test_loss:.4f},'
+                    f' lr: {lr}'
+                )
     
     final_test_acc, _ = test(test_loader, net)
     print(f'\n=== final test acc: {final_test_acc:.2f} ===\n')
