@@ -32,12 +32,14 @@ def get_dataloaders(data_root_path: str, batch_size: int):
     train_loader = DataLoader(
         dataset=train_set,
         batch_size=batch_size,
-        shuffle=True                # 注意shuffle参数传的值
+        shuffle=True,               # 注意shuffle参数传的值
+        num_workers=2,              # 多进程加载数据
     )
     test_loader = DataLoader(
         dataset=test_set,
         batch_size=batch_size,
-        shuffle=False               # 注意shuffle参数传的值
+        shuffle=False,              # 注意shuffle参数传的值
+        num_workers=2,              # 多进程加载数据
     )
     
     return train_loader, test_loader
