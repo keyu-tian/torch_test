@@ -16,7 +16,7 @@ USING_GPU = torch.cuda.is_available()
 
 def test(test_ld, net: nn.Module):
     global USING_GPU
-    
+
     net.eval()
     with torch.no_grad():
         tot_correct, tot_pred, tot_loss, tot_iters = 0, 0, 0., 0
@@ -27,7 +27,7 @@ def test(test_ld, net: nn.Module):
             batch_size = targets.shape[0]
             tot_correct += logits.argmax(dim=1).eq(targets).sum().item()
             tot_pred += batch_size
-            
+
             tot_loss += F.cross_entropy(logits, targets).item()
             tot_iters += 1
     net.train()
@@ -39,8 +39,8 @@ def test(test_ld, net: nn.Module):
 
 def main():
     global USING_GPU
-    
-    print(f'\n=== cuda is {"" if USING_GPU else "NOT"} available ===\n')
+
+    print(f'\n=== cuda is {"" if USING_GPU else "NOT"} available ===\n')    # todo: woaiefjiwahe ffiweu
     
     data_root_path = os.path.abspath(os.path.join(os.path.expanduser('~'), 'datasets', 'mnist'))
     set_seed(0)
@@ -115,7 +115,7 @@ def main():
                 train_accs.append((global_iter, train_acc))
                 train_losses.append((global_iter, train_loss))
                 lrs.append((global_iter, lr))
-                
+
                 print(
                     f'{time_str()} ep[{epoch+1}/{EPOCHS}], it[{local_iter+1:-3d}/{ITERS}]:'
                     f' tr_acc: {train_acc:5.2f}%, tr_loss: {train_loss:.4f},'
