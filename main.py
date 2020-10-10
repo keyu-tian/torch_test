@@ -120,7 +120,7 @@ def main():
                     f'{time_str()} ep[{epoch+1}/{EPOCHS}], it[{local_iter+1:-3d}/{ITERS}]:'
                     f' tr_acc: {train_acc:5.2f}%, tr_loss: {train_loss:.4f},'
                     f' te_acc: {test_acc:5.2f}%, te_loss: {test_loss:.4f},'
-                    f' lr: {lr}'
+                    f' lr: {lr:6f}'
                 )
     
     final_test_acc, _ = test(test_loader, net)
