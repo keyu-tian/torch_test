@@ -51,7 +51,7 @@ def main():
     MIN_LR = 0.
     WEIGHT_DECAY = 1e-5
     OP_MOMENTUM = 0.9
-    EPOCHS = 5
+    EPOCHS = 8
     BATCH_SIZE = 128
     DROP_OUT_RATE = 0.1
     ITERS = len(train_loader)
