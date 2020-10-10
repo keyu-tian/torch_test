@@ -102,7 +102,7 @@ def main():
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-            scheduler.step(global_iter)
+            scheduler.step()
             
             if global_iter % test_freq == 0 or epoch == EPOCHS - 1 and local_iter == ITERS - 1:
                 test_acc, test_loss = test(test_loader, net)
@@ -119,7 +119,7 @@ def main():
                 print(f'{time_str()} ep[{epoch+1}/{EPOCHS}], it[{local_iter+1:-3d}/{ITERS}]:'
                       f' tr_acc: {train_acc:5.2f}%, tr_loss: {train_loss:.4f},'
                       f' te_acc: {test_acc:5.2f}%, te_loss: {test_loss:.4f},'
-                      f' lr: {lr:.5f}')
+                      f' lr: {lr}')
     
     final_test_acc, _ = test(test_loader, net)
     print(f'\n=== final test acc: {final_test_acc:.2f} ===\n')
