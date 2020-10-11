@@ -97,7 +97,7 @@ def main():
             # targets.shape: (B,)
             # logits.shape: (B, num_classes)
             
-            logits = net(inputs)
+            logits = net(inputs)        # todo 最关键
             loss = F.cross_entropy(logits, targets)
             optimizer.zero_grad()
             loss.backward()
