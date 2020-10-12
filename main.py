@@ -53,7 +53,7 @@ def main():
     WEIGHT_DECAY = 1e-5
     OP_MOMENTUM = 0.9
     EPOCHS = 8
-    BATCH_SIZE = 8
+    BATCH_SIZE = 128
     DROP_OUT_RATE = 0.1
     ITERS = len(train_loader)
     print(
@@ -79,7 +79,7 @@ def main():
 
     # net = resnetb.ResNet18(10)
 
-    net = wideresnet.WideResNet(depth=4, widen_factor=2, num_classes=10, dropout_rate=0.2)
+    net = wideresnet.WideResNet(depth=40, widen_factor=2, num_classes=10, dropout_rate=0.2)
 
     init_params(net, verbose=True)
     if USING_GPU:
