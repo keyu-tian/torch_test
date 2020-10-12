@@ -11,7 +11,6 @@ from torch.optim.lr_scheduler import CosineAnnealingLR
 from data import get_dataloaders, MNIST_img_ch, MNIST_img_size, MNIST_num_classes
 from misc import time_str, set_seed, init_params
 from models import FCNet
-import resnetb
 import wideresnet
 from vis import plot_curves
 
@@ -56,7 +55,7 @@ def main():
     WEIGHT_DECAY = 1e-5
     OP_MOMENTUM = 0.9
     EPOCHS = 50
-    BATCH_SIZE = 256
+    BATCH_SIZE = 32
     DROP_OUT_RATE = 0.1
     
     train_loader, test_loader = get_dataloaders(data_root_path=data_root_path, batch_size=BATCH_SIZE)
@@ -86,7 +85,7 @@ def main():
     
     # net = resnetb.ResNet18(10)
     
-    net = wideresnet.WideResNet(depth=40, widen_factor=2, num_classes=10, dropout_rate=0.2)
+    net = wideresnet.WideResNet(depth=4, widen_factor=1, num_classes=10, dropout_rate=0.2)
     
     init_params(net, verbose=True)
     if USING_GPU:
@@ -102,7 +101,7 @@ def main():
     optimizer = SGD(net.parameters(), lr=BASIC_LR, weight_decay=WEIGHT_DECAY, momentum=OP_MOMENTUM)
     scheduler = CosineAnnealingLR(optimizer, T_max=EPOCHS * ITERS, eta_min=MIN_LR)
     
-    test_freq = 300
+    test_freq = 2
     set_seed(0)
     for epoch in range(EPOCHS):
         for local_iter in range(ITERS):
@@ -139,12 +138,6 @@ def main():
                 train_losses.append((global_iter, train_loss))
                 lrs.append((global_iter, lr))
 
-                iter_dt = time.time() - last_t
-                res_iters = EPOCHS * ITERS - global_iter - 1
-                remain_secs = iter_dt * res_iters
-                remain_time = datetime.timedelta(seconds=round(remain_secs))
-                finish_time = time.strftime("%m-%d %H:%M:%S", time.localtime(time.time() + remain_secs))
-                
                 t_str = time_str()
                 print(
                     f'{time_str()} ep[{epoch + 1}/{EPOCHS}], it[{local_iter + 1:-3d}/{ITERS}]:'
@@ -155,7 +148,6 @@ def main():
                     f' cuda: {cuda_t - data_t:.3f}s,'
                     f' grad: {grad_t - cuda_t:.3f}s,'
                     f' test: {test_t - grad_t:.3f}s,'
-                    f' remain [{remain_time}], finish [{finish_time}]'
                 )
     
     final_test_acc, _ = test(test_loader, net)
