@@ -1,4 +1,5 @@
 import os
+import time
 
 import torch
 import torch.nn.functional as F
@@ -15,20 +16,22 @@ from vis import plot_curves
 
 USING_GPU = torch.cuda.is_available()
 
-def test(test_ld, net: nn.Module):
-    global USING_GPU
 
+def test(test_itrt, test_iters, net: nn.Module):
+    global USING_GPU
+    
     net.eval()
     with torch.no_grad():
         tot_correct, tot_pred, tot_loss, tot_iters = 0, 0, 0., 0
-        for (inputs, targets) in test_ld:
+        for _ in range(test_iters):
+            inputs, targets = next(test_itrt)
             if USING_GPU:
                 inputs, targets = inputs.cuda(), targets.cuda()
             logits = net(inputs)
             batch_size = targets.shape[0]
             tot_correct += logits.argmax(dim=1).eq(targets).sum().item()
             tot_pred += batch_size
-
+            
             tot_loss += F.cross_entropy(logits, targets).item()
             tot_iters += 1
     net.train()
@@ -40,22 +43,25 @@ def test(test_ld, net: nn.Module):
 
 def main():
     global USING_GPU
-
+    
     print(f'\n=== cuda is {"" if USING_GPU else "NOT"} available ===\n')
     
     data_root_path = os.path.abspath(os.path.join(os.path.expanduser('~'), 'datasets', 'mnist'))
     set_seed(0)
-    train_loader, test_loader = get_dataloaders(data_root_path=data_root_path, batch_size=128)
-
+    
     # hyper-parameters:
     BASIC_LR = 2e-3
     MIN_LR = 0.
     WEIGHT_DECAY = 1e-5
     OP_MOMENTUM = 0.9
-    EPOCHS = 100
+    EPOCHS = 50
     BATCH_SIZE = 256
     DROP_OUT_RATE = 0.1
+    
+    train_loader, test_loader = get_dataloaders(data_root_path=data_root_path, batch_size=BATCH_SIZE)
     ITERS = len(train_loader)
+    TEST_ITERS = len(test_loader)
+    train_itrt, test_itrt = iter(train_loader), iter(test_loader)
     print(
         f'=== hyper-params 2333  ===\n'
         f'  epochs={EPOCHS}\n'
@@ -66,9 +72,9 @@ def main():
         f'  momentum={OP_MOMENTUM}\n'
         f'  drop out={DROP_OUT_RATE}\n'
     )
-
+    
     set_seed(0)
-
+    
     '''
     net = FCNet(
         input_dim=MNIST_img_ch * MNIST_img_size ** 2,
@@ -76,11 +82,11 @@ def main():
         dropout_p=DROP_OUT_RATE
     )
     '''
-
+    
     # net = resnetb.ResNet18(10)
-
+    
     net = wideresnet.WideResNet(depth=40, widen_factor=2, num_classes=10, dropout_rate=0.2)
-
+    
     init_params(net, verbose=True)
     if USING_GPU:
         net = net.cuda()
@@ -95,13 +101,18 @@ def main():
     optimizer = SGD(net.parameters(), lr=BASIC_LR, weight_decay=WEIGHT_DECAY, momentum=OP_MOMENTUM)
     scheduler = CosineAnnealingLR(optimizer, T_max=EPOCHS * ITERS, eta_min=MIN_LR)
     
-    test_freq = 256
+    test_freq = 300
     set_seed(0)
     for epoch in range(EPOCHS):
-        for local_iter, (inputs, targets) in enumerate(train_loader):
+        for local_iter in range(ITERS):
+            last_t = time.time()
+            inputs, targets = next(train_itrt)
+            data_t = time.time()
             global_iter = epoch * ITERS + local_iter
             if USING_GPU:
                 inputs, targets = inputs.cuda(), targets.cuda()
+            cuda_t = time.time()
+            
             # inputs.shape: (B, C, H, W)
             # targets.shape: (B,)
             # logits.shape: (B, num_classes)
@@ -112,9 +123,11 @@ def main():
             loss.backward()
             optimizer.step()
             scheduler.step()
+            grad_t = time.time()
             
             if global_iter % test_freq == 0 or epoch == EPOCHS - 1 and local_iter == ITERS - 1:
-                test_acc, test_loss = test(test_loader, net)
+                test_acc, test_loss = test(test_itrt, TEST_ITERS, net)
+                test_t = time.time()
                 train_acc = 100 * logits.detach().argmax(dim=1).eq(targets).sum().item() / targets.shape[0]
                 train_loss = loss.item()
                 lr = scheduler.get_lr()[0]
@@ -124,12 +137,17 @@ def main():
                 train_accs.append((global_iter, train_acc))
                 train_losses.append((global_iter, train_loss))
                 lrs.append((global_iter, lr))
-
+                
+                t_str = time_str()
                 print(
-                    f'{time_str()} ep[{epoch+1}/{EPOCHS}], it[{local_iter+1:-3d}/{ITERS}]:'
+                    f'{time_str()} ep[{epoch + 1}/{EPOCHS}], it[{local_iter + 1:-3d}/{ITERS}]:'
                     f' tr_acc: {train_acc:5.2f}%, tr_loss: {train_loss:.4f},'
                     f' te_acc: {test_acc:5.2f}%, te_loss: {test_loss:.4f},'
-                    f' lr: {lr:6f}'
+                    f' lr: {lr:6f}\n{" " * len(t_str)}  '
+                    f' data: {data_t - last_t:.3f}s,'
+                    f' cuda: {cuda_t - data_t:.3f}s,'
+                    f' grad: {grad_t - cuda_t:.3f}s,'
+                    f' test: {test_t - grad_t:.3f}s'
                 )
     
     final_test_acc, _ = test(test_loader, net)
