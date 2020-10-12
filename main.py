@@ -48,16 +48,16 @@ def main():
     train_loader, test_loader = get_dataloaders(data_root_path=data_root_path, batch_size=128)
 
     # hyper-parameters:
-    BASIC_LR = 5e-4
+    BASIC_LR = 2e-3
     MIN_LR = 0.
     WEIGHT_DECAY = 1e-5
     OP_MOMENTUM = 0.9
-    EPOCHS = 8
-    BATCH_SIZE = 128
+    EPOCHS = 100
+    BATCH_SIZE = 256
     DROP_OUT_RATE = 0.1
     ITERS = len(train_loader)
     print(
-        f'=== hyper-params ===\n'
+        f'=== hyper-params 2333  ===\n'
         f'  epochs={EPOCHS}\n'
         f'  train iters={ITERS}\n'
         f'  batch size={BATCH_SIZE}\n'
@@ -95,7 +95,7 @@ def main():
     optimizer = SGD(net.parameters(), lr=BASIC_LR, weight_decay=WEIGHT_DECAY, momentum=OP_MOMENTUM)
     scheduler = CosineAnnealingLR(optimizer, T_max=EPOCHS * ITERS, eta_min=MIN_LR)
     
-    test_freq = 64
+    test_freq = 256
     set_seed(0)
     for epoch in range(EPOCHS):
         for local_iter, (inputs, targets) in enumerate(train_loader):
