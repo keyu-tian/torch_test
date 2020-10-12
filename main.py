@@ -55,7 +55,7 @@ def main():
     WEIGHT_DECAY = 1e-5
     OP_MOMENTUM = 0.9
     EPOCHS = 50
-    BATCH_SIZE = 32
+    BATCH_SIZE = 256
     DROP_OUT_RATE = 0.1
     
     train_loader, test_loader = get_dataloaders(data_root_path=data_root_path, batch_size=BATCH_SIZE)
@@ -85,7 +85,7 @@ def main():
     
     # net = resnetb.ResNet18(10)
     
-    net = wideresnet.WideResNet(depth=4, widen_factor=1, num_classes=10, dropout_rate=0.2)
+    net = wideresnet.WideResNet(depth=40, widen_factor=2, num_classes=10, dropout_rate=0.2)
     
     init_params(net, verbose=True)
     if USING_GPU:
@@ -101,7 +101,7 @@ def main():
     optimizer = SGD(net.parameters(), lr=BASIC_LR, weight_decay=WEIGHT_DECAY, momentum=OP_MOMENTUM)
     scheduler = CosineAnnealingLR(optimizer, T_max=EPOCHS * ITERS, eta_min=MIN_LR)
     
-    test_freq = 2
+    test_freq = 300
     set_seed(0)
     for epoch in range(EPOCHS):
         for local_iter in range(ITERS):
