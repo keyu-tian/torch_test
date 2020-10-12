@@ -9,10 +9,11 @@ from torch.optim.lr_scheduler import CosineAnnealingLR
 from data import get_dataloaders, MNIST_img_ch, MNIST_img_size, MNIST_num_classes
 from misc import time_str, set_seed, init_params
 from models import FCNet
+import resnetb
+import wideresnet
 from vis import plot_curves
 
 USING_GPU = torch.cuda.is_available()
-
 
 def test(test_ld, net: nn.Module):
     global USING_GPU
@@ -40,7 +41,7 @@ def test(test_ld, net: nn.Module):
 def main():
     global USING_GPU
 
-    print(f'\n=== cuda is {"" if USING_GPU else "NOT"} available ===\n')    # todo: woaiefjiwahe ffiweu
+    print(f'\n=== cuda is {"" if USING_GPU else "NOT"} available ===\n')
     
     data_root_path = os.path.abspath(os.path.join(os.path.expanduser('~'), 'datasets', 'mnist'))
     set_seed(0)
@@ -52,7 +53,7 @@ def main():
     WEIGHT_DECAY = 1e-5
     OP_MOMENTUM = 0.9
     EPOCHS = 8
-    BATCH_SIZE = 128
+    BATCH_SIZE = 8
     DROP_OUT_RATE = 0.1
     ITERS = len(train_loader)
     print(
@@ -65,13 +66,21 @@ def main():
         f'  momentum={OP_MOMENTUM}\n'
         f'  drop out={DROP_OUT_RATE}\n'
     )
-    
+
     set_seed(0)
+
+    '''
     net = FCNet(
         input_dim=MNIST_img_ch * MNIST_img_size ** 2,
         output_dim=MNIST_num_classes,
         dropout_p=DROP_OUT_RATE
     )
+    '''
+
+    # net = resnetb.ResNet18(10)
+
+    net = wideresnet.WideResNet(depth=4, widen_factor=2, num_classes=10, dropout_rate=0.2)
+
     init_params(net, verbose=True)
     if USING_GPU:
         net = net.cuda()
