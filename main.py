@@ -1,3 +1,4 @@
+import datetime
 import os
 import time
 
@@ -137,6 +138,12 @@ def main():
                 train_accs.append((global_iter, train_acc))
                 train_losses.append((global_iter, train_loss))
                 lrs.append((global_iter, lr))
+
+                iter_dt = time.time() - last_t
+                res_iters = EPOCHS * ITERS - global_iter - 1
+                remain_secs = iter_dt * res_iters
+                remain_time = datetime.timedelta(seconds=round(remain_secs))
+                finish_time = time.strftime("%m-%d %H:%M:%S", time.localtime(time.time() + remain_secs))
                 
                 t_str = time_str()
                 print(
@@ -147,7 +154,8 @@ def main():
                     f' data: {data_t - last_t:.3f}s,'
                     f' cuda: {cuda_t - data_t:.3f}s,'
                     f' grad: {grad_t - cuda_t:.3f}s,'
-                    f' test: {test_t - grad_t:.3f}s'
+                    f' test: {test_t - grad_t:.3f}s,'
+                    f' remain [{remain_time}], finish [{finish_time}]'
                 )
     
     final_test_acc, _ = test(test_loader, net)
