@@ -7,7 +7,7 @@ MNIST_num_classes = 10
 MNIST_MEAN, MNIST_STD = (0.1307,), (0.3081,)    # 逗号是为了让他是tuple；如果没有逗号就是括号了，得到的值是int类型的
 
 
-def get_dataloaders(data_root_path: str, batch_size: int):
+def get_dataloaders(data_root: str, batch_size: int):
     transform_train = tv.transforms.Compose([
         tv.transforms.RandomCrop(size=MNIST_img_size, padding=4),
         tv.transforms.ToTensor(),
@@ -19,12 +19,12 @@ def get_dataloaders(data_root_path: str, batch_size: int):
     ])
     
     train_set = tv.datasets.MNIST(
-        root=data_root_path,
+        root=data_root,
         train=True, download=True,  # 注意train参数传的值
         transform=transform_train
     )
     test_set = tv.datasets.MNIST(
-        root=data_root_path,
+        root=data_root,
         train=False, download=True, # 注意train参数传的值
         transform=transform_test
     )

@@ -37,14 +37,47 @@ def test(test_ld, net: nn.Module):
     return test_acc, test_loss
 
 
+def train_epoch(epoch, ITERS, EPOCHS, train_loader, test_loader, components, recorders):
+    net, optimizer, scheduler = components
+    test_accs, test_losses, train_accs, train_losses, lrs = recorders
+    
+    test_freq = 256
+    for local_iter, (inputs, targets) in enumerate(train_loader):
+        global_iter = epoch * ITERS + local_iter
+        if USING_GPU:
+            inputs, targets = inputs.cuda(), targets.cuda()
+        
+        logits = net(inputs)
+        loss = F.cross_entropy(logits, targets)
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+        scheduler.step()
+        
+        if global_iter % test_freq == 0 or epoch == EPOCHS - 1 and local_iter == ITERS - 1:
+            test_acc, test_loss = test(test_loader, net)
+            train_acc = 100 * logits.detach().argmax(dim=1).eq(targets).sum().item() / targets.shape[0]
+            train_loss = loss.item()
+            lr = scheduler.get_lr()[0]
+            
+            test_accs.append((global_iter, test_acc))
+            test_losses.append((global_iter, test_loss))
+            train_accs.append((global_iter, train_acc))
+            train_losses.append((global_iter, train_loss))
+            lrs.append((global_iter, lr))
+            
+            print(
+                f'{time_str()} ep[{epoch+1}/{EPOCHS}], it[{local_iter+1:-3d}/{ITERS}]: tr_acc: {train_acc:5.2f}%, tr_loss: {train_loss:.4f}, te_acc: {test_acc:5.2f}%, te_loss: {test_loss:.4f}, lr: {lr:6f}'
+            )
+
+
 def main():
     global USING_GPU
 
-    print(f'\n=== cuda is {"" if USING_GPU else "NOT"} available ===\n')    # todo: woaiefjiwahe ffiweu
+    print(f'\n=== cuda is {"" if USING_GPU else "NOT"} available ===\n')
     
-    data_root_path = os.path.abspath(os.path.join(os.path.expanduser('~'), 'datasets', 'mnist'))
+    data_root = os.path.abspath(os.path.join(os.path.expanduser('~'), 'datasets', 'mnist'))
     set_seed(0)
-    train_loader, test_loader = get_dataloaders(data_root_path=data_root_path, batch_size=128)
 
     # hyper-parameters:
     BASIC_LR = 5e-4
@@ -52,18 +85,12 @@ def main():
     WEIGHT_DECAY = 1e-5
     OP_MOMENTUM = 0.9
     EPOCHS = 8
-    BATCH_SIZE = 128
+    BATCH_SIZE = 64
     DROP_OUT_RATE = 0.1
+    train_loader, test_loader = get_dataloaders(data_root=data_root, batch_size=BATCH_SIZE)
     ITERS = len(train_loader)
     print(
-        f'=== hyper-params ===\n'
-        f'  epochs={EPOCHS}\n'
-        f'  train iters={ITERS}\n'
-        f'  batch size={BATCH_SIZE}\n'
-        f'  cosine lr:{BASIC_LR} -> {MIN_LR}\n'
-        f'  weight decay={WEIGHT_DECAY}\n'
-        f'  momentum={OP_MOMENTUM}\n'
-        f'  drop out={DROP_OUT_RATE}\n'
+        f'=== hyper-params ===\n  epochs={EPOCHS}\n  train iters={ITERS}\n  batch size={BATCH_SIZE}\n  cosine lr:{BASIC_LR} -> {MIN_LR}\n  weight decay={WEIGHT_DECAY}\n  momentum={OP_MOMENTUM}\n  drop out={DROP_OUT_RATE}\n'
     )
     
     set_seed(0)
@@ -81,47 +108,16 @@ def main():
     train_accs, test_accs = [], []
     train_losses, test_losses = [], []
     lrs = []
+    recorders = (test_accs, test_losses, train_accs, train_losses, lrs)
     
     set_seed(0)
     optimizer = SGD(net.parameters(), lr=BASIC_LR, weight_decay=WEIGHT_DECAY, momentum=OP_MOMENTUM)
     scheduler = CosineAnnealingLR(optimizer, T_max=EPOCHS * ITERS, eta_min=MIN_LR)
+    components = (net, optimizer, scheduler)
     
-    test_freq = 64
     set_seed(0)
     for epoch in range(EPOCHS):
-        for local_iter, (inputs, targets) in enumerate(train_loader):
-            global_iter = epoch * ITERS + local_iter
-            if USING_GPU:
-                inputs, targets = inputs.cuda(), targets.cuda()
-            # inputs.shape: (B, C, H, W)
-            # targets.shape: (B,)
-            # logits.shape: (B, num_classes)
-            
-            logits = net(inputs)        # todo 最关键
-            loss = F.cross_entropy(logits, targets)
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-            scheduler.step()
-            
-            if global_iter % test_freq == 0 or epoch == EPOCHS - 1 and local_iter == ITERS - 1:
-                test_acc, test_loss = test(test_loader, net)
-                train_acc = 100 * logits.detach().argmax(dim=1).eq(targets).sum().item() / targets.shape[0]
-                train_loss = loss.item()
-                lr = scheduler.get_lr()[0]
-                
-                test_accs.append((global_iter, test_acc))
-                test_losses.append((global_iter, test_loss))
-                train_accs.append((global_iter, train_acc))
-                train_losses.append((global_iter, train_loss))
-                lrs.append((global_iter, lr))
-
-                print(
-                    f'{time_str()} ep[{epoch+1}/{EPOCHS}], it[{local_iter+1:-3d}/{ITERS}]:'
-                    f' tr_acc: {train_acc:5.2f}%, tr_loss: {train_loss:.4f},'
-                    f' te_acc: {test_acc:5.2f}%, te_loss: {test_loss:.4f},'
-                    f' lr: {lr:6f}'
-                )
+        train_epoch(epoch, ITERS, EPOCHS, train_loader, test_loader, components, recorders)
     
     final_test_acc, _ = test(test_loader, net)
     print(f'\n=== final test acc: {final_test_acc:.2f} ===\n')
