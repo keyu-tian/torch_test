@@ -11,17 +11,17 @@ from misc import time_str, set_seed, init_params
 from models import FCNet
 from vis import plot_curves
 
-USING_GPU = torch.cuda.is_available()
+
+def using_gpu():
+    return torch.cuda.is_available()
 
 
 def test(test_ld, net: nn.Module):
-    global USING_GPU
-
     net.eval()
     with torch.no_grad():
         tot_correct, tot_pred, tot_loss, tot_iters = 0, 0, 0., 0
         for (inputs, targets) in test_ld:
-            if USING_GPU:
+            if using_gpu():
                 inputs, targets = inputs.cuda(), targets.cuda()
             logits = net(inputs)
             batch_size = targets.shape[0]
@@ -44,7 +44,7 @@ def train_epoch(epoch, ITERS, EPOCHS, train_loader, test_loader, components, rec
     test_freq = 256
     for local_iter, (inputs, targets) in enumerate(train_loader):
         global_iter = epoch * ITERS + local_iter
-        if USING_GPU:
+        if using_gpu():
             inputs, targets = inputs.cuda(), targets.cuda()
         
         logits = net(inputs)
@@ -56,7 +56,8 @@ def train_epoch(epoch, ITERS, EPOCHS, train_loader, test_loader, components, rec
         
         if global_iter % test_freq == 0 or epoch == EPOCHS - 1 and local_iter == ITERS - 1:
             test_acc, test_loss = test(test_loader, net)
-            train_acc = 100 * logits.detach().argmax(dim=1).eq(targets).sum().item() / targets.shape[0]
+            preds = logits.detach().argmax(dim=1)
+            train_acc = 100 * preds.eq(targets).sum().item() / targets.shape[0]
             train_loss = loss.item()
             lr = scheduler.get_lr()[0]
             
@@ -67,14 +68,15 @@ def train_epoch(epoch, ITERS, EPOCHS, train_loader, test_loader, components, rec
             lrs.append((global_iter, lr))
             
             print(
-                f'{time_str()} ep[{epoch+1}/{EPOCHS}], it[{local_iter+1:-3d}/{ITERS}]: tr_acc: {train_acc:5.2f}%, tr_loss: {train_loss:.4f}, te_acc: {test_acc:5.2f}%, te_loss: {test_loss:.4f}, lr: {lr:6f}'
+                f'{time_str()} ep[{epoch+1}/{EPOCHS}], it[{local_iter+1:-3d}/{ITERS}]:'
+                f' tr_acc: {train_acc:5.2f}%, tr_loss: {train_loss:.4f},'
+                f' te_acc: {test_acc:5.2f}%, te_loss: {test_loss:.4f},'
+                f' lr: {lr:6f}'
             )
 
 
 def main():
-    global USING_GPU
-
-    print(f'\n=== cuda is {"" if USING_GPU else "NOT"} available ===\n')
+    print(f'\n=== cuda is {"" if using_gpu() else "NOT"} available ===\n')
     
     data_root = os.path.abspath(os.path.join(os.path.expanduser('~'), 'datasets', 'mnist'))
     set_seed(0)
@@ -90,7 +92,14 @@ def main():
     train_loader, test_loader = get_dataloaders(data_root=data_root, batch_size=BATCH_SIZE)
     ITERS = len(train_loader)
     print(
-        f'=== hyper-params ===\n  epochs={EPOCHS}\n  train iters={ITERS}\n  batch size={BATCH_SIZE}\n  cosine lr:{BASIC_LR} -> {MIN_LR}\n  weight decay={WEIGHT_DECAY}\n  momentum={OP_MOMENTUM}\n  drop out={DROP_OUT_RATE}\n'
+        f'=== hyper-params ===\n'
+        f'  epochs={EPOCHS}\n'
+        f'  train iters={ITERS}\n'
+        f'  batch size={BATCH_SIZE}\n'
+        f'  cosine lr:{BASIC_LR} -> {MIN_LR}\n'
+        f'  weight decay={WEIGHT_DECAY}\n'
+        f'  momentum={OP_MOMENTUM}\n'
+        f'  drop out={DROP_OUT_RATE}\n'
     )
     
     set_seed(0)
@@ -100,7 +109,7 @@ def main():
         dropout_p=DROP_OUT_RATE
     )
     init_params(net, verbose=True)
-    if USING_GPU:
+    if using_gpu():
         net = net.cuda()
     
     print('=== start training from scratch ===\n')
